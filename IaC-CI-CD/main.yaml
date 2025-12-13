@@ -1,0 +1,124 @@
+name: Fully Automated Terraform + Docker + ECR + EC2 Deploy
+
+on:
+  push:
+    branches: ["main"]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: flask-app
+
+jobs:
+# -----------------------------
+# 1. Terraform Infrastructure
+# -----------------------------
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      - name: Terraform Init & Apply
+        working-directory: terraform
+        run: |
+          terraform init
+          terraform apply -auto-approve
+
+# -----------------------------
+# 2. Build & Push Docker Image
+# -----------------------------
+  docker-ecr:
+    needs: terraform
+    runs-on: ubuntu-latest
+    outputs:
+      image_uri: ${{ steps.build.outputs.image_uri }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push Docker Image
+        id: build
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+          IMAGE_URI=$ACCOUNT_ID.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.ECR_REPOSITORY }}:latest
+
+          echo "Building image: $IMAGE_URI"
+
+          docker build -t $IMAGE_URI .
+          docker push $IMAGE_URI
+
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+
+# -----------------------------
+# 3. Deploy to EC2
+# --
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# ---------------------------
+  deploy-ec2:
+    needs: docker-ecr
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Get EC2 Public IP
+        run: |
+          EC2_HOST=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=WebServer" "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].PublicIpAddress" \
+            --output text)
+
+          echo "EC2_HOST=$EC2_HOST" >> $GITHUB_ENV
+
+      - name: Copy deploy script
+        run: |
+          scp -o StrictHostKeyChecking=no deploy.sh \
+            ${{ secrets.EC2_USER }}@${{ env.EC2_HOST }}:/home/${{ secrets.EC2_USER }}/deploy.sh
+
+      - name: Deploy container
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+            ${{ secrets.EC2_USER }}@${{ env.EC2_HOST }} \
+            "chmod +x ~/deploy.sh && \
+             IMAGE_URI='${{ needs.docker-ecr.outputs.image_uri }}' \
+             bash ~/deploy.sh"
