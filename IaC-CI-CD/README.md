@@ -1,10 +1,3 @@
-Got it 👍
-Below is your **same README content**, but now the **S3 + DynamoDB setup is properly inserted**, **short, clean, and ordered** as **Step 0**, without changing your existing flow.
-
-You can **replace your README.md with this version** 👇
-
----
-
 # 🚀 Project: Build Infrastructure as Code (IaC) & Deploy via CI/CD on AWS
 
 ## 🎯 Introduction
