@@ -215,5 +215,3 @@ terraform destroy
 * Remote state with locking
 * Fully reproducible infrastructure
 * Suitable for **minor projects, demos, and interviews**
-
-Just say 👍
