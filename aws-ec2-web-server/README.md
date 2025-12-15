@@ -1,128 +1,193 @@
-🚀 Project: Host Website on AWS EC2 with Custom Folder Structure
-----------------------------------------------------------------------------------------
+# 🚀 Project: Host a Website on AWS EC2 Using Nginx
 
-🎤 Introduction:
-In this project, you'll set up a web server on AWS EC2 to host a website using Nginx. You’ll configure a VPC, public subnet, internet access, and deploy a website with a custom folder structure.
+## 📌 Project Overview
 
-🌍 End Result:
+This project demonstrates how to host a website on an **AWS EC2 instance** using **Nginx**. The setup includes creating a custom **VPC**, configuring **public networking**, and deploying a website with a **custom folder structure**. An optional section covers hosting a static website using **Amazon S3**.
 
-EC2 instance hosting a website
+---
 
-Custom folder structure for website deployment
+## 🎯 End Result
 
-Option for static website hosting on S3
+* EC2 instance hosting a live website
+* Custom folder structure for web deployment
+* Public internet access using Nginx
+* Optional static website hosting using S3
 
-🏛 Step 1 – Create a VPC
-----------------------------------------------------------------------------------------
-Go to VPC → Create VPC.
+---
 
-Name: My-Project-VPC
+## 🏗 Architecture Overview
 
-CIDR Block: 10.0.0.0/16
+```
+Internet
+   |
+Internet Gateway
+   |
+Public Route Table
+   |
+Public Subnet
+   |
+EC2 Instance (Nginx Web Server)
+```
 
-Click Create VPC.
+---
 
-Result: An isolated network for your project.
+## 🧱 Step 1: Create a VPC
 
+* Navigate to **VPC → Create VPC**
+* Name: `My-Project-VPC`
+* CIDR Block: `10.0.0.0/16`
 
-🌐 Step 2 – Create Public Subnet
-----------------------------------------------------------------------------------------
-Go to VPC → Subnets → Create Subnet.
+**Result:**
+An isolated virtual network for the project.
 
-Name: Public-Subnet-1, CIDR: 10.0.1.0/24
+---
 
-Select My-Project-VPC and click Create Subnet.
+## 🌐 Step 2: Create a Public Subnet
 
-Result: Subnet created for the web server.
+* Navigate to **VPC → Subnets → Create Subnet**
+* Name: `Public-Subnet-1`
+* CIDR Block: `10.0.1.0/24`
+* VPC: `My-Project-VPC`
 
+**Result:**
+A public subnet to host the EC2 web server.
 
-🔗 Step 3 – Attach Internet Gateway (IGW)
-----------------------------------------------------------------------------------------
-Go to VPC → Internet Gateways → Create IGW.
+---
 
-Name it My-IGW and attach to My-Project-VPC.
+## 🔗 Step 3: Attach an Internet Gateway (IGW)
 
-Result: VPC is connected to the internet.
+* Navigate to **VPC → Internet Gateways → Create Internet Gateway**
+* Name: `My-IGW`
+* Attach it to `My-Project-VPC`
 
-🛣 Step 4 – Create Route Table
-----------------------------------------------------------------------------------------
-Go to VPC → Route Tables → Create Route Table.
+**Result:**
+The VPC is now connected to the internet.
 
-Add route 0.0.0.0/0 → Target = My-IGW.
+---
 
-Associate it with Public-Subnet-1.
+## 🛣 Step 4: Create and Associate a Route Table
 
-Result: Internet access enabled for the subnet.
+* Navigate to **VPC → Route Tables → Create Route Table**
+* Add route:
 
-🔐 Step 5 – Create Security Group
-----------------------------------------------------------------------------------------
-Go to EC2 → Security Groups → Create Security Group.
+  * Destination: `0.0.0.0/0`
+  * Target: `My-IGW`
+* Associate the route table with `Public-Subnet-1`
 
-Add rules for SSH (22) and HTTP (80).
+**Result:**
+Instances in the public subnet can access the internet.
 
-Result: Firewall configured for secure SSH and public HTTP access.
+---
 
-🖥 Step 6 – Launch EC2 Instance
-----------------------------------------------------------------------------------------
-Go to EC2 → Launch Instance.
+## 🔐 Step 5: Create a Security Group
 
-AMI: Ubuntu Server 22.04 LTS, Instance Type: t2.micro
+* Navigate to **EC2 → Security Groups → Create Security Group**
+* Inbound rules:
 
-VPC: My-Project-VPC, Subnet: Public-Subnet-1, Security Group: WebServer-SG
+  * SSH (22) – for administration
+  * HTTP (80) – for website access
+* Associate with `My-Project-VPC`
 
-Click Launch Instance.
+**Result:**
+Firewall rules configured for secure access.
 
-Result: EC2 instance created and ready to use.
+---
 
-🛠 Step 7 – Install Nginx
-----------------------------------------------------------------------------------------
-SSH into EC2:
+## 🖥 Step 6: Launch an EC2 Instance
 
-sudo apt update && sudo apt install nginx -y
+* Navigate to **EC2 → Launch Instance**
+* AMI: **Ubuntu Server 22.04 LTS**
+* Instance Type: `t2.micro`
+* VPC: `My-Project-VPC`
+* Subnet: `Public-Subnet-1`
+* Security Group: `WebServer-SG`
 
-Check status:
+**Result:**
+EC2 instance launched and ready.
 
-systemctl status nginx
+---
 
-Result: Nginx installed and running.
+## 🛠 Step 7: Install and Start Nginx
 
-🌐 Step 8 – Deploy Your Website
-----------------------------------------------------------------------------------------
+SSH into the EC2 instance and run:
 
-SSH into EC2 and navigate to /var/www/html/:
+```bash
+sudo apt update
+sudo apt install nginx -y
+sudo systemctl status nginx
+```
 
-cd /var/www/html/  
-sudo rm index.nginx-debian.html  
+**Result:**
+Nginx is installed and running.
 
+---
+
+## 🌐 Step 8: Deploy the Website
+
+```bash
+cd /var/www/html/
+sudo rm index.nginx-debian.html
+```
 
 Restart Nginx:
 
+```bash
 sudo systemctl restart nginx
+```
 
-Result: Website live at http://<Public-IP>.
+Access the website using:
 
+```
+http://<EC2-Public-IP>
+```
 
+**Result:**
+Website is live and accessible.
 
-🛠 Optional: Host Website on S3 (Static)
-----------------------------------------------------------------------------------------
+---
 
-Create an S3 bucket and enable Static Website Hosting.
+## 🛠 Optional: Host a Static Website on Amazon S3
 
-Upload your website files and configure public access.
+* Create an S3 bucket
+* Enable **Static Website Hosting**
+* Upload website files
+* Configure public access permissions
 
-Access the website via the provided S3 URL.
+**Result:**
+Static website hosted using Amazon S3.
 
-Result: Static website hosted on S3.
+---
 
+## 📦 Project Summary
 
-✅ Summary:
-----------------------------------------------------------------------------------------
-Created VPC and public subnet
+* Created a custom VPC and public subnet
+* Enabled internet access using an Internet Gateway
+* Configured routing and security groups
+* Launched an EC2 instance and installed Nginx
+* Deployed a website with a custom folder structure
+* Optional static hosting using Amazon S3
 
-Configured internet access and firewall rules
+---
 
-Launched EC2 and installed Nginx
+## 🧠 Interview Summary
 
-Deployed website with custom folder structure
+> “I hosted a website on AWS EC2 using Nginx by designing a custom VPC with a public subnet, configuring internet access via an Internet Gateway and route table, securing the instance using security groups, and deploying the website using a custom folder structure. I also explored static website hosting using Amazon S3 as an alternative.”
 
-Optional: Hosted on S3 for static content.
+---
+
+## ✅ Final Notes
+
+* Beginner-friendly AWS project
+* Clear networking fundamentals
+* Practical web hosting experience
+* Ideal for **learning, demos, and interviews**
+
+---
+
+If you want next, I can:
+
+* Convert this into a **Terraform-based version**
+* Add **screenshots checklist** for documentation
+* Create a **combined EC2 + S3 comparison section**
+
+Just tell me 👍
