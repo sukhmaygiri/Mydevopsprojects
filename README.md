@@ -29,7 +29,6 @@ DevOpsLab-Projects/
 ├── k8s-microservice-deployment
 ├── ec2-cloud-monitoring
 └── README.md
-
 ```
 
 ---
