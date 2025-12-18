@@ -1,287 +1,221 @@
-# 🚀 Project: Build Infrastructure as Code (IaC) & Deploy via CI/CD on AWS
+# 🚀 Project: Local Kubernetes Multi-Service Setup
 
-## 🎯 Introduction
+## 📌 Project Overview
 
-This project demonstrates a **complete DevOps workflow** using **Terraform, Docker, AWS, and GitHub Actions**.
-A Node.js application is containerized, infrastructure is provisioned using IaC, and deployment is fully automated via a CI/CD pipeline.
+This project demonstrates how to deploy a **multi-service application** locally using **Kind (Kubernetes IN Docker)**.
+It consists of a **frontend Node.js service** and a **backend Express service**, running in isolated Kubernetes pods, communicating via services.
 
-Every push to the `main` branch:
-
-* Provisions AWS infrastructure using Terraform
-* Builds & pushes a Docker image to Amazon ECR
-* Deploys the application to an EC2 instance automatically
+The project emphasizes **containerization, Kubernetes deployments, and service-to-service communication**.
 
 ---
 
-## 🌍 End Result
+## 🎯 What This Project Delivers
 
-✅ Fully automated infrastructure on AWS
-✅ Dockerized Node.js application
-✅ CI/CD pipeline using GitHub Actions
-✅ EC2 pulls image securely from ECR
-✅ Application accessible via EC2 public IP on port **8080**
+* A **backend service** exposing REST APIs
+* A **frontend service** serving HTML and calling backend APIs
+* Local Kubernetes cluster using **Kind**
+* Networking handled via **Kubernetes services**
+* Easy testing and development on your local machine
 
 ---
 
-## 📁 Project Structure
+## 🏗 Architecture Overview
 
-```bash
-.
-├── Dockerfile
-├── README.md
-├── app
-│   ├── package.json
-│   ├── public
-│   │   └── index.html
-│   └── server.js
-├── deploy.sh
-├── terraform
-│   ├── backend.tf
-│   ├── ec2.tf
-│   ├── ecr.tf
-│   ├── iam.tf
-│   ├── main.tf
-│   ├── output.tf
-│   ├── rds.tf
-│   └── security.tf
-└── .github
-    └── workflows
-        └── main.yaml
+```
+             ┌───────────────┐
+             │  Frontend Pod │
+             │  (Node.js)    │
+             └───────┬───────┘
+                     │ Calls /api/info
+                     ▼
+             ┌───────────────┐
+             │  Backend Pod  │
+             │  (Express)    │
+             └───────┬───────┘
+                     │
+               Kubernetes Service
+                     │
+            NodePort / ClusterIP
+                     │
+                Localhost:30080
 ```
 
 ---
 
-## 🧠 Application Overview
+## 🪜 Project Implementation Steps
 
-### 🖥 Frontend
+### 🌐 Step 1: Install Prerequisites
 
-* Simple **HTML/CSS/JS** UI
-* Displays random motivational quotes
-* Calls backend API endpoint `/api/quote`
-
-### ⚙ Backend
-
-* Node.js + Express server
-* Serves static frontend files
-* Provides random quote API
-
----
-
-## 🗂 Step 0 – Prepare Terraform Remote Backend (One-Time Setup)
-
-Before running Terraform, you must create an **S3 bucket** for Terraform state and a **DynamoDB table** for state locking.
-
-> ⚠️ This step is required **only once** and must be completed **before `terraform init`**.
-
----
-
-### 🪣 Create S3 Bucket for Terraform State
+#### 1️⃣ Install Docker
 
 ```bash
-aws s3 mb s3://your-new-bucket-eryqwerqyw --region us-east-1
+sudo dnf install -y docker
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ec2-user
+newgrp docker
+docker --version
 ```
 
 ---
 
-### 🔄 Enable Versioning on S3 Bucket
+#### 2️⃣ Install kubectl
 
 ```bash
-aws s3api put-bucket-versioning \
-  --bucket your-new-bucket-eryqwerqyw \
-  --versioning-configuration Status=Enabled
+curl -LO "https://dl.k8s.io/release/$(curl -Ls https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+kubectl version --client
 ```
 
 ---
 
-### 🔐 Create DynamoDB Table for State Locking (Recommended)
+#### 3️⃣ Install Kind
 
 ```bash
-aws dynamodb create-table \
-  --table-name terraform-locks \
-  --attribute-definitions AttributeName=LockID,AttributeType=S \
-  --key-schema AttributeName=LockID,KeyType=HASH \
-  --billing-mode PAY_PER_REQUEST
+curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
+chmod +x ./kind
+sudo mv ./kind /usr/local/bin/kind
+kind version
 ```
 
 ---
 
-### 🏛 Terraform Backend Configuration
+### 🧱 Step 2: Create a Kind Cluster
 
-```hcl
-backend "s3" {
-  bucket         = "your-new-bucket-eryqwerqyw"
-  key            = "project/terraform.tfstate"
-  region         = "us-east-1"
-  dynamodb_table = "terraform-locks"
-  encrypt        = true
+Use the provided `kind-cluster.yaml`:
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+- role: control-plane
+  extraPortMappings:
+  - containerPort: 30080
+    hostPort: 30080
+    protocol: TCP
+```
+
+Create the cluster with a specific name:
+
+```bash
+kind create cluster --name multi-service --config kind-cluster.yaml
+```
+
+**Purpose:**
+Sets up a local Kubernetes cluster with port `30080` mapped to the frontend service.
+
+---
+
+### 🔗 Step 3: Build & Load Docker Images
+
+#### 1️⃣ Build backend and frontend images:
+
+```bash
+# Build backend image
+docker build -t backend:1.0 ./backend
+
+# Build frontend image
+docker build -t frontend:1.0 ./frontend
+```
+
+#### 2️⃣ Load images into the Kind cluster:
+
+```bash
+kind load docker-image backend:1.0 --name multi-service
+kind load docker-image frontend:1.0 --name multi-service
+```
+
+**Purpose:**
+Packages the applications and makes them available to the local Kind cluster.
+
+---
+
+### 🖥 Step 4: Deploy Backend Service
+
+```bash
+kubectl apply -f k8s/backend.yaml
+```
+
+**Backend Deployment:**
+
+* **Replicas:** 2
+* **Port:** 5000
+* **Service Type:** ClusterIP (internal)
+
+---
+
+### 🗄 Step 5: Deploy Frontend Service
+
+```bash
+kubectl apply -f k8s/frontend.yaml
+```
+
+**Frontend Deployment:**
+
+* **Replicas:** 2
+* **Port:** 3000
+* **Service Type:** NodePort (accessible via localhost:30080)
+
+---
+
+### 🌍 Step 6: Verify Services
+
+Check pods:
+
+```bash
+kubectl get pods
+```
+
+Check services:
+
+```bash
+kubectl get svc
+```
+
+Expected NodePort for frontend: **30080**.
+
+---
+
+### 🧪 Step 7: Test the Setup
+
+Open a browser:
+
+```
+http://localhost:30080
+```
+
+* Click the **“Call Backend API”** button
+* You should see JSON response from the backend service:
+
+```json
+{
+  "project": "Kubernetes Multi-Service",
+  "cluster": "kind",
+  "version": "2.0.0"
 }
 ```
 
-✅ Remote state storage
-✅ Versioning enabled
-✅ State locking for CI/CD safety
+---
+
+## 🎯 End Result
+
+* Multi-service app running **entirely locally** on Kubernetes (Kind)
+* Frontend communicates with backend via **Kubernetes service discovery**
+* Easy to extend with more services or external databases
+* Perfect for **learning Kubernetes basics and service communication**
 
 ---
 
-## 🐳 Step 1 – Dockerize the Application
+## 🧠 Interview Summary
 
-### 📄 Dockerfile
-
-```dockerfile
-FROM node:20-alpine
-
-WORKDIR /usr/src/app
-
-COPY app/package*.json ./
-RUN npm install --production
-
-COPY app/ .
-
-EXPOSE 8080
-CMD ["node", "server.js"]
-```
-
-### 🔍 What this does:
-
-* Uses lightweight Node.js image
-* Installs production dependencies
-* Runs the server on port `8080`
+> “I set up a local Kubernetes cluster using Kind and deployed a multi-service Node.js application. I configured deployments, services, and NodePort to enable frontend-backend communication inside the cluster, demonstrating containerization, orchestration, and service discovery.”
 
 ---
 
-## ☁️ Step 2 – Infrastructure as Code (Terraform)
+## ✅ Final Notes
 
-Terraform provisions all AWS resources automatically.
-
-### 🔧 Resources Created
-
-* EC2 instance (Amazon Linux 2)
-* Amazon ECR repository
-* IAM Role & Instance Profile
-* Security Groups
-* RDS MySQL database
-* S3 backend for Terraform state
-* DynamoDB for state locking
-
----
-
-### 🖥 EC2 Configuration
-
-* Instance Type: `t2.micro`
-* Docker installed via `user_data`
-* AWS CLI installed
-* IAM role attached for ECR pull access
-
----
-
-### 🔐 Security Groups
-
-**Web Server**
-
-* Port `8080` – Application access
-* Port `22` – SSH access
-
-**Database**
-
-* Port `3306` – MySQL (only from EC2)
-
----
-
-## 🗄 Amazon RDS (MySQL)
-
-* Engine: MySQL 8.0
-* Instance: `db.t4g.micro`
-* Accessible only from EC2 security group
-
-⚠️ *For learning/demo purposes only (credentials are hardcoded)*
-
----
-
-## 🔁 Step 3 – CI/CD with GitHub Actions
-
-### 📄 Workflow File
-
-`.github/workflows/main.yaml`
-
-### 🔄 Pipeline Stages
-
-#### 1️⃣ Terraform Apply
-
-* Initializes Terraform
-* Provisions AWS infrastructure
-
-#### 2️⃣ Docker Build & Push
-
-* Builds Docker image
-* Pushes image to Amazon ECR
-
-#### 3️⃣ Deploy to EC2
-
-* SSH into EC2
-* Pulls latest image
-* Runs container
-
----
-
-## 🚀 Step 4 – Deployment Script (EC2)
-
-### 📄 deploy.sh
-
-```bash
-docker pull $IMAGE_URI
-docker stop app || true
-docker rm app || true
-docker run -d --name app -p 8080:8080 $IMAGE_URI
-```
-
-✔ Stops old container
-✔ Runs new version automatically
-
----
-
-## 🔑 Required GitHub Secrets
-
-| Secret Name           | Description               |
-| --------------------- | ------------------------- |
-| AWS_ACCESS_KEY_ID     | AWS access key            |
-| AWS_SECRET_ACCESS_KEY | AWS secret key            |
-| EC2_SSH_KEY           | Private SSH key           |
-| EC2_USER              | EC2 username (`ec2-user`) |
-
----
-
-## 🌐 How to Access the App
-
-```text
-http://<EC2_PUBLIC_IP>:8080
-```
-
-You should see the **Random Quote Generator UI** 🎉
-
----
-
-## 📤 Terraform Outputs
-
-* EC2 Public IP
-* RDS Endpoint
-* ECR Repository URL
-
----
-
-## ✅ Summary
-
-✔ Built a Node.js application
-✔ Dockerized the app
-✔ Created AWS infrastructure using Terraform
-✔ Implemented CI/CD with GitHub Actions
-✔ Deployed automatically to EC2 using ECR
-
----
-
-## 🧑‍🎓 Learning Outcomes
-
-* Infrastructure as Code (Terraform)
-* CI/CD pipelines
-* Docker & container deployment
-* AWS IAM, EC2, ECR, RDS
-* Real-world DevOps automation
+* Strong foundation in Kubernetes deployments and services
+* Local, reproducible environment for development
+* Frontend + backend integration using Node.js and Express
+* Excellent project for **Kubernetes fundamentals and interviews**
