@@ -57,15 +57,15 @@ jobs:
       - name: Update Backend Deployment Image
         run: |
           IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$BACKEND_REPO:${GITHUB_SHA}
-          sudo kubectl set image deployment/backend backend=$IMAGE_URI
+          kubectl set image deployment/backend backend=$IMAGE_URI
 
       - name: Update Frontend Deployment Image
         run: |
           IMAGE_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$FRONTEND_REPO:${GITHUB_SHA}
-          sudo kubectl set image deployment/frontend frontend=$IMAGE_URI
+          kubectl set image deployment/frontend frontend=$IMAGE_URI
 
       - name: Verify Rollout
         run: |
-          sudo kubectl rollout status deployment/backend
-          sudo kubectl rollout status deployment/frontend
+          kubectl rollout status deployment/backend
+          kubectl rollout status deployment/frontend
 
