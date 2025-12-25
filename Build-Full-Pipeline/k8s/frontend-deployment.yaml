@@ -14,9 +14,14 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: <account-id>.dkr.ecr.us-east-1.amazonaws.com/frontend-service:1.0 
+        image: 019873006107.dkr.ecr.us-east-1.amazonaws.com/frontend-service:1.0
         ports:
         - containerPort: 80
+        env:
+        - name: MONGO_HOST
+          value: "mongo"
+        - name: MONGO_PORT
+          value: "27017"
       imagePullSecrets:
       - name: ecr-secret
 ---
