@@ -24,6 +24,7 @@ DevOpsLab-Projects/
 ├── secure-db-connectivity
 ├── terraform-secure-db
 ├── iac-ci-cd-pipeline
+├── build-deploy-full-pipeline
 ├── serverless-guestbook
 ├── serverless-microservices
 ├── k8s-microservice-deployment
@@ -72,6 +73,12 @@ DevOpsLab-Projects/
 * Automate cloud infrastructure deployment
 * Practice CI/CD workflows for real projects
 * Foundation for DevOps pipelines
+
+**Full Build → Deploy Pipeline**  
+📁 `build-deploy-full-pipeline`  
+* End‑to‑end automated build and deployment workflow  
+* Includes DevOps pipeline steps (build, test, deploy)  
+* Great bridge from basic to fully functioning delivery pipelines
 
 ---
 
