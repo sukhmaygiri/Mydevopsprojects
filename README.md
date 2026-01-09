@@ -6,6 +6,7 @@
 ![GitHub license](https://img.shields.io/github/license/Sonu-Budidha/DevOpsLab-Projects)
 
 ## About This Repository
+This project was originally provided as part of an internship program.I have worked on understanding, modifying, and enhancing the codebase.
 
 **DevOpsLab Projects** is a collection of **hands-on cloud and DevOps projects** designed for learners and beginners who want to get **real-world experience with AWS, Kubernetes, CI/CD, and serverless architectures**.
 
